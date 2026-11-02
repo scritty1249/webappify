@@ -13,7 +13,7 @@ Submit the files and download the bundle.
 
 ## Notes
 - Comments are preserved
-- Subject to JavaScript string size limits, as files and encoded as Base64 URLs. 
+- Subject to JavaScript string size limits, as files are encoded as Base64 URLs. 
 
 ## Limitations
 - Only static ESM is supported
