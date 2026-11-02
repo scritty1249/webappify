@@ -1,6 +1,12 @@
-# Webbappify
+# Webappify
 
 Basic bundler that combines multiple files for a static single-page website into a standalone HTML file.
+
+# Usage
+
+Run the contents of `/app/src` as a web server, or open `/app/build/webappify.html` in any browser.
+Upload any number of `.css` and `.js` files, with a single `.html` index page.
+Submit the files and download the bundle.
 
 ## Limitations
 - Only static ESM is supported
