@@ -10,6 +10,7 @@ Submit the files and download the bundle.
 
 ## Limitations
 - Only static ESM is supported
+- Only stylesheet imports from HTML are supported
 - Dynamic code imports are unsupported
 - Multi-level subdirectories are unsupported
 - Re-exports and export aggregation are unsupported

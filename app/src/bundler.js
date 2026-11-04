@@ -63,11 +63,27 @@ function populateScriptTag (url, tags, modules, filedata) {
         populateScriptTag(u, tags, modules, filedata);
 }
 
-function populateTags (tags, modules, filedata) {
+function populateScriptTags (tags, modules, filedata) {
     for (const [url, {type}] of tags) {
         if (type === "script")
             populateScriptTag(url, tags, modules, filedata);
     }
+}
+
+function bundleScripts (content, filedata) {
+    const ranges = html.parseScripts(content);
+    const tags = new Map();
+    const modules = new Map();
+    resolveScriptTags(ranges, tags, modules, filedata);
+    populateScriptTags(tags, modules, filedata);
+    return html.bundleScripts(content, tags, MODULE_MAP_NAME);
+}
+
+function bundleStyles (content, filedata) {
+    const ranges = html.parseStyles(content);
+    const tags = new Map();
+    resolveStyleTags(ranges, tags, filedata);
+    return html.bundleStyles(content, tags);
 }
 
 export async function bundle (files) {
@@ -77,12 +93,8 @@ export async function bundle (files) {
         FILEDATA.set(cleanPath(file.name), content);
     }
     const indexFileContent = FILEDATA.get(getIndexFileName(files));
-    const ranges = html.parse(indexFileContent);
-    const tags = new Map();
-    const modules = new Map();
-    resolveScriptTags(ranges.scripts, tags, modules, FILEDATA);
-    resolveStyleTags(ranges.styles, tags, FILEDATA);
-    populateTags(tags, modules, FILEDATA);
+    const firstPass = bundleScripts(indexFileContent, FILEDATA);
+    const finalPass = bundleStyles(firstPass, FILEDATA);
     FILEDATA.clear();
-    return html.bundle(indexFileContent, tags, MODULE_MAP_NAME);
+    return finalPass;
 }

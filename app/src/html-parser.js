@@ -5,16 +5,22 @@ const SCRIPT_PATTERN = /<script\b[^>]*?\bsrc\s*=\s*(['"])(?<url>(?!https?:|\/\/)
 const STYLE_PATTERN = /<link\b(?:[^>]*\bhref\s*=\s*(['"])(?<url>(?!https?:|\/\/)[^"']*)\1[^>]*\brel\s*=\s*(['"])stylesheet\3|[^>]*\brel\s*=\s*(['"])stylesheet\4[^>]*\bhref\s*=\s*(['"])(?<url>(?!https?:|\/\/)[^"']*)\5)[^>]*>/gmi;
 
 
-function createScriptTag (content) {
-    const bytes = new TextEncoder().encode(content);
+const TEXT_ENCODER = new TextEncoder();
+
+function b64str (str) {
+    const bytes = TEXT_ENCODER.encode(str);
     const bstr = Array.from(bytes, (b) => String.fromCharCode(b)).join("");
-    const b64 = btoa(bstr);
-    const url = `data:text/javascript;base64,${b64}`;
+    return btoa(bstr);
+}
+
+function createScriptTag (content) {
+    const url = `data:text/javascript;base64,${b64str(content)}`;
     return `<script type="module" src="${url}"></script>`;
 }
 
 function createStyleTag (content) {
-    return `<style>\n${content}\n</style>`;
+    const url = `data:text/css;base64,${b64str(content)}`;
+    return `<link rel="stylesheet" href="${url}" />`;
 }
 
 function createUnknownTag (content) {
@@ -107,7 +113,8 @@ function collectTags (order, tags) {
         }
         collected.push(aggregateTag(url, tags));
         written.add(url);
-        for (const u of tags.get(url).resolved) written.add(u);
+        if (tags.get(url)?.resolved?.size)
+            for (const u of tags.get(url).resolved) written.add(u);
     }
     return collected;
 }
@@ -123,14 +130,42 @@ function splitContent (content, tags) {
     return slices;
 }
 
-export function parse (content) {
-    const styles = new Map();
+export function parseScripts (content) {
     const scripts = new Map();
     for (const { url, range } of matchAllTags(content, SCRIPT_PATTERN))
         scripts.set(cleanPath(url), range);
+    return scripts;
+}
+
+export function parseStyles (content) {
+    const styles = new Map();
     for (const { url, range } of matchAllTags(content, STYLE_PATTERN))
         styles.set(cleanPath(url), range);
-    return { scripts, styles };
+    return styles;
+}
+
+
+/**
+ * Expects `tags` to be an ordered `Map` of:
+ *
+ * {
+ *   <url>: {
+ *     required: <ordered Set of urls>,
+ *     content: <substring to insert>,
+ *     type: "script",
+ *     range?: [<start index>, <end index>]
+ *   }
+ * }
+ *
+ */
+export function bundleScripts (content, tags, moduleMapName) {
+    const ordrer = resolveTags(tags);
+    const insert = collectTags(ordrer, tags);
+    const slices = splitContent(content, tags);
+    let result = slices[0] + createScriptTag(`window.${moduleMapName} = new Map();`) + "\n";
+    for (let i = 1; i < slices.length; i++)
+        result += insert[i-1] + slices[i];
+    return result;
 }
 
 /**
@@ -140,18 +175,17 @@ export function parse (content) {
  *   <url>: {
  *     required: <ordered Set of urls>,
  *     content: <substring to insert>,
- *     type: "script" | "style",
+ *     type: "style",
  *     range?: [<start index>, <end index>]
  *   }
  * }
  *
  */
-export function bundle (content, tags, moduleMapName) {
-    const ordrer = resolveTags(tags);
+export function bundleStyles (content, tags) {
+    const ordrer = new Set(tags.keys());
     const insert = collectTags(ordrer, tags);
     const slices = splitContent(content, tags);
-    console.log(tags);
-    let result = slices[0] + createScriptTag(`window.${moduleMapName} = new Map();`) + "\n";
+    let result = slices[0];
     for (let i = 1; i < slices.length; i++)
         result += insert[i-1] + slices[i];
     return result;
