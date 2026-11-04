@@ -4,9 +4,16 @@ Basic bundler that combines multiple files for a static single-page website into
 
 # Usage
 
-Run the contents of `/app/src` as a web server, or open `/app/build/webappify.html` in any browser.
+Run the contents of `/app/src` as a web server, or open the bundled `/app/build/webappify.html` in any browser.
+> The bundle of Webappify was made using Webappify.
+
 Upload any number of `.css` and `.js` files, with a single `.html` index page.
+
 Submit the files and download the bundle.
+
+## Notes
+- Comments are preserved
+- Subject to JavaScript string size limits, as files are encoded as Base64 URLs. 
 
 ## Limitations
 - Only static ESM is supported
